@@ -89,7 +89,12 @@ final class CurlTransport implements TransportInterface
         if ($respBody === false) {
             $err  = \curl_error($ch);
             $code = \curl_errno($ch);
-            \curl_close($ch);
+
+            // No curl_close(): the handle is an object since PHP 8.0 and is
+            // released with the last reference to it. PHP 8.5 deprecates the
+            // call, and an application that turns deprecations into exceptions —
+            // as the framework does — would get that one instead of this error,
+            // on every single request.
             throw new ClientException('cURL error (' . $code . '): ' . $err);
         }
 
@@ -102,7 +107,6 @@ final class CurlTransport implements TransportInterface
             //CURL_HTTP_VERSION_3 => '3',
             default => '1.1',
         };
-        \curl_close($ch);
 
         // Provide a raw header array similar to $http_response_header.
         $rawHeaders = array_merge(['HTTP/' . $versionString . ' ' . $status], $respHeaders);
