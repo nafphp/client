@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NixPHP\Client\Transports;
+namespace Naf\Client\Transports;
 
 interface TransportInterface
 {

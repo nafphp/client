@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use NixPHP\Client\Core\Client;
-use function NixPHP\app;
+use Naf\Client\Core\Client;
+use function Naf\app;
 
 app()->container()->set(Client::class, fn() => new Client());

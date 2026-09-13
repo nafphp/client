@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Fixtures\Transports;
 
-use NixPHP\Client\Transports\TransportInterface;
+use Naf\Client\Transports\TransportInterface;
 
 final class MockTransport implements TransportInterface
 {

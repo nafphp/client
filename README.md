@@ -1,27 +1,27 @@
 ````md
 <div align="center" style="text-align: center;">
 
-![Logo](https://nixphp.github.io/docs/assets/nixphp-logo-small-square.png)
+![NAF](assets/naf-logo-small-square.png)
 
-[![NixPHP Client Plugin](https://github.com/nixphp/client/actions/workflows/php.yml/badge.svg)](https://github.com/nixphp/client/actions/workflows/php.yml)
+[![NAF Client Plugin](https://github.com/nafphp/client/actions/workflows/php.yml/badge.svg)](https://github.com/nafphp/client/actions/workflows/php.yml)
 
 </div>
 
-[← Back to NixPHP](https://github.com/nixphp/framework)
+[← Back to NAF](https://github.com/nafphp/framework)
 
 ---
 
-# nixphp/client
+# naf/client
 
 > **Lightweight PSR-18 HTTP client — pragmatic, robust, and framework-friendly.**
 
 This plugin provides a small and dependency-free implementation of  
 `Psr\Http\Client\ClientInterface`, designed for **internal APIs, integrations,
-and infrastructure code** inside NixPHP applications.
+and infrastructure code** inside NAF applications.
 
 It focuses on **correctness, stability, and testability** rather than feature bloat.
 
-> 🧩 Official NixPHP plugin  
+> 🧩 Official NAF plugin  
 > Minimal surface area, explicit behavior, no hidden magic.
 
 ---
@@ -60,7 +60,7 @@ This design keeps the client:
 ## Installation
 
 ```bash
-composer require nixphp/client
+composer require naf/client
 ````
 
 The plugin is autoloaded automatically.
@@ -158,7 +158,7 @@ This keeps the client predictable and PSR-18-aligned.
 ## Requirements
 
 * PHP ≥ 8.2
-* `nixphp/framework` >= 0.1.0
+* `naf/framework` >= 0.1.0
 * `nyholm/psr7`  >= 1.0 (used for PSR-7 implementation)
 
 ---

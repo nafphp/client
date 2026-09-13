@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace NixPHP\Client;
+namespace Naf\Client;
 
-use NixPHP\Client\Core\Client;
-use function NixPHP\app;
+use Naf\Client\Core\Client;
+use function Naf\app;
 
 function client(): Client
 {

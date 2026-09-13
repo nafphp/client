@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace NixPHP\Client\Exception;
+namespace Naf\Client\Exception;
 
 use Psr\Http\Client\ClientExceptionInterface;
 

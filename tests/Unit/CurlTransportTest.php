@@ -4,15 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use NixPHP\Client\Exception\ClientException;
-use NixPHP\Client\Transports\CurlTransport;
+use Naf\Client\Exception\ClientException;
+use Naf\Client\Transports\CurlTransport;
 use PHPUnit\Framework\TestCase;
 use Throwable;
 
 /**
  * The transport must not raise a deprecation of its own.
  *
- * NixPHP turns a deprecation into an exception, so one raised inside a request
+ * NAF turns a deprecation into an exception, so one raised inside a request
  * does not end up in a log where somebody might get round to it: it replaces the
  * response. A single deprecated call therefore breaks every outbound request on
  * the PHP version that introduces it, and it breaks them in a way that looks
@@ -44,7 +44,7 @@ final class CurlTransportTest extends TestCase
 
     public function testASuccessfulRequestRaisesNothing(): void
     {
-        $file = tempnam(sys_get_temp_dir(), 'nixphp-client-') ?: '';
+        $file = tempnam(sys_get_temp_dir(), 'naf-client-') ?: '';
         file_put_contents($file, 'hello');
 
         $this->treatDeprecationsAsErrors();

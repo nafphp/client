@@ -4,17 +4,17 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
-use NixPHP\Client\Core\Client;
-use NixPHP\Core\Config;
+use Naf\Client\Core\Client;
+use Naf\Core\Config;
 use Nyholm\Psr7\Request;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
 use Fixtures\Transports\MockTransport;
-use Tests\NixPHPTestCase;
-use function NixPHP\app;
-use function NixPHP\Client\client;
+use Tests\NafTestCase;
+use function Naf\app;
+use function Naf\Client\client;
 
-final class ClientTest extends NixPHPTestCase
+final class ClientTest extends NafTestCase
 {
     public function testClientResponse(): void
     {

@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace NixPHP\Client\Transports;
+namespace Naf\Client\Transports;
 
-use NixPHP\Client\Exception\ClientException;
+use Naf\Client\Exception\ClientException;
 
 final class CurlTransport implements TransportInterface
 {
@@ -24,7 +24,7 @@ final class CurlTransport implements TransportInterface
         $connectTimeout = (float) ($config['connect_timeout'] ?? 8);
         $maxRedirects   = (int)   ($config['max_redirects'] ?? 5);
         $verifySsl      = (bool)  ($config['ssl_verify'] ?? true);
-        $userAgent      = (string)($config['user_agent'] ?? 'NixPHP-Client/1.0');
+        $userAgent      = (string)($config['user_agent'] ?? 'NAF-Client/1.0');
         $caBundle       = $config['ca_bundle'] ?? null;
 
         $respHeaders = [];

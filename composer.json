@@ -1,9 +1,9 @@
 {
-  "name": "nixphp/client",
-  "description": "NixPHP Client Plugin to make simple http requests.",
+  "name": "naf/client",
+  "description": "NAF Client Plugin to make simple http requests.",
   "minimum-stability": "stable",
   "license": "MIT",
-  "type": "nixphp-plugin",
+  "type": "naf-plugin",
   "authors": [
     {
       "name": "Flo Knapp",
@@ -12,7 +12,7 @@
   ],
   "autoload": {
     "psr-4": {
-      "NixPHP\\Client\\": "src/"
+      "Naf\\Client\\": "src/"
     }
   },
   "autoload-dev": {
@@ -24,7 +24,7 @@
   "require": {
     "php": ">=8.3",
     "ext-curl": "*",
-    "nixphp/framework": "^0.1.0",
+    "naf/framework": "^0.2",
     "psr/http-client": "^1.0",
     "nyholm/psr7": "^1.8"
   },

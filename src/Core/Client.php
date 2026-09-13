@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace NixPHP\Client\Core;
+namespace Naf\Client\Core;
 
-use NixPHP\Client\Transports\CurlTransport;
-use NixPHP\Client\Transports\StreamTransport;
-use NixPHP\Client\Transports\TransportInterface;
-use NixPHP\Client\Exception\ClientException;
+use Naf\Client\Transports\CurlTransport;
+use Naf\Client\Transports\StreamTransport;
+use Naf\Client\Transports\TransportInterface;
+use Naf\Client\Exception\ClientException;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
-use function NixPHP\config;
-use function NixPHP\json;
-use function NixPHP\response;
+use function Naf\config;
+use function Naf\json;
+use function Naf\response;
 
 class Client implements ClientInterface
 {
