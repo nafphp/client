@@ -162,4 +162,40 @@ final class ClientTest extends NixPHPTestCase
     {
         $this->assertInstanceOf(Client::class, client());
     }
+
+    public function testWithOptionsOverridesRetriesForThisCallOnly(): void
+    {
+        $transport = new MockTransport();
+        $transport->pushError(new \RuntimeException('file_get_contents() failed to enable crypto'));
+
+        $shared  = new Client([$transport]);
+        $oneShot = $shared->withOptions(['retries' => 0]);
+
+        try {
+            $oneShot->sendRequest(new Request('POST', 'https://example.com/oauth/token'));
+            self::fail('A one-shot request must not be retried.');
+        } catch (ClientExceptionInterface) {
+            // expected: the transient error is not retried away
+        }
+
+        self::assertSame(1, $transport->calls(), 'retries => 0 must send exactly once');
+    }
+
+    public function testWithOptionsLeavesTheSharedClientUntouched(): void
+    {
+        $transport = new MockTransport();
+        $transport->pushError(new \RuntimeException('file_get_contents() failed to enable crypto'));
+        $transport->pushResponse('ok', [
+            'HTTP/1.1 200 OK',
+            'Content-Type: text/plain',
+        ]);
+
+        $shared = new Client([$transport]);
+        $shared->withOptions(['retries' => 0, 'retry_delay_ms' => 0]);
+
+        $response = $shared->sendRequest(new Request('GET', 'https://example.com/test'));
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame(2, $transport->calls(), 'the container-held client keeps retrying');
+    }
 }

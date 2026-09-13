@@ -20,6 +20,9 @@ class Client implements ClientInterface
     /** @var array<int,TransportInterface> */
     private array $transports;
 
+    /** @var array<string,mixed> Per-instance overrides layered over config('client'). */
+    private array $options = [];
+
     public function __construct(?array $transports = null)
     {
         // Prefer cURL, fallback to streams.
@@ -29,9 +32,27 @@ class Client implements ClientInterface
         ];
     }
 
+    /**
+     * A copy of this client with options layered over the configuration.
+     *
+     * The container holds a single shared client, so this hands back a clone: a
+     * caller that needs `retries => 0` for something it must not send twice — an
+     * OAuth authorization code, a rotating refresh token — never changes what
+     * every other caller gets.
+     *
+     * @param array<string,mixed> $options
+     */
+    public function withOptions(array $options): self
+    {
+        $clone = clone $this;
+        $clone->options = [...$this->options, ...$options];
+
+        return $clone;
+    }
+
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
-        $cfg = (array) config('client', []);
+        $cfg = [...(array) config('client', []), ...$this->options];
 
         $method = strtoupper($request->getMethod());
         $url    = (string) $request->getUri();
