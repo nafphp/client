@@ -3,11 +3,12 @@
         colors="true"
         failOnRisky="true"
         failOnWarning="true"
+         failOnDeprecation="true"
         beStrictAboutTestsThatDoNotTestAnything="true"
         displayDetailsOnPhpunitDeprecations="true">
 
     <testsuites>
-        <testsuite name="NixPHP Test Suite">
+        <testsuite name="NAF Test Suite">
             <directory>tests</directory>
         </testsuite>
     </testsuites>
