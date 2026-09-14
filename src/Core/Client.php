@@ -6,13 +6,13 @@ namespace Naf\Client\Core;
 
 use Naf\Client\Transports\CurlTransport;
 use Naf\Client\Transports\StreamTransport;
+use Naf\Client\Transports\StreamingTransportInterface;
 use Naf\Client\Transports\TransportInterface;
 use Naf\Client\Exception\ClientException;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use function Naf\config;
-use function Naf\json;
 use function Naf\response;
 
 class Client implements ClientInterface
@@ -56,7 +56,7 @@ class Client implements ClientInterface
 
         $method = strtoupper($request->getMethod());
         $url    = (string) $request->getUri();
-        $body   = (string) $request->getBody();
+        $body   = $request->getBody();
 
         $retries      = (int)($cfg['retries'] ?? 1);          // additional attempts
         $retryDelayMs = (int)($cfg['retry_delay_ms'] ?? 150);
@@ -68,16 +68,32 @@ class Client implements ClientInterface
         $cfg['http_version'] = (string)($cfg['http_version'] ?? 'auto'); // auto|1.1|2
 
         $transport = $this->pickTransport();
+        $streaming = $transport instanceof StreamingTransportInterface;
+
+        if (($cfg['streaming'] ?? false) && !$streaming) {
+            throw new ClientException('The selected HTTP transport does not support streaming.');
+        }
+
+        $offset     = $body->isSeekable() ? $body->tell() : null;
+        $legacyBody = $streaming ? null : (string) $body;
 
         $last = null;
 
         // Attempt 0..retries
         for ($attempt = 0; $attempt <= $retries; $attempt++) {
             try {
-                [$respBody, $rawHeaders] = $transport->send($url, $method, $headerLines, $body, $cfg);
+                if ($attempt > 0 && $streaming) {
+                    $body->seek($offset);
+                }
+
+                [$respBody, $rawHeaders] = $streaming
+                    ? $transport->sendStream($url, $method, $headerLines, $body, $cfg)
+                    : $transport->send($url, $method, $headerLines, $legacyBody, $cfg);
                 [$status, $headers]      = $this->parseHeaders($rawHeaders);
 
-                return response($respBody, $status, $headers);
+                return $streaming
+                    ? response('', $status, $headers)->withBody($respBody)
+                    : response($respBody, $status, $headers);
             } catch (\Throwable $e) {
                 $last = $e;
 
@@ -91,7 +107,9 @@ class Client implements ClientInterface
                     str_contains($msg, 'timed out') ||
                     str_contains($msg, 'connection reset');
 
-                if ($attempt < $retries && $transient) {
+                $replayable = !$streaming || $offset !== null;
+
+                if ($attempt < $retries && $transient && $replayable) {
                     if ($retryDelayMs > 0) {
                         usleep($retryDelayMs * 1000);
                     }
@@ -152,7 +170,7 @@ class Client implements ClientInterface
     private function parseHeaders(array $raw): array
     {
         $statusLine = $raw[0] ?? '';
-        if (!preg_match('#HTTP/\d+\.\d+\s+(\d+)#i', $statusLine, $m)) {
+        if (!preg_match('#HTTP/\d+(?:\.\d+)?\s+(\d+)#i', $statusLine, $m)) {
             throw new ClientException('Failed to parse HTTP status from response');
         }
         $status = (int) $m[1];

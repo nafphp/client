@@ -40,3 +40,21 @@ composer require naf/client
 ## License
 
 MIT. Part of [NAF](https://github.com/nafphp/framework).
+
+## Streaming changes in 0.2.2 (unreleased)
+
+The default cURL transport transfers PSR-7 request bodies in chunks from their current
+position and spools responses to automatically deleted temporary files. Caller-owned
+request streams stay open. Close the returned PSR-7 body when finished. The temporary
+filesystem must have enough space for the response; network I/O completes before
+`sendRequest()` returns. Casting the response body to a string still loads it into memory.
+
+Existing `TransportInterface` implementations and string-based `send()` calls continue
+to work. Custom transports can additionally implement `StreamingTransportInterface`.
+Set `withOptions(['streaming' => true])` to require that capability rather than allowing
+the buffering fallback. The PHP stream-wrapper fallback remains string-based.
+
+Retries seek to the request's original position. A non-seekable streaming request is
+never automatically retried. `decode_content => false` preserves encoded response bytes
+for object/file storage. Redirects retain only the final response headers and body;
+`max_redirects => 0` disables following redirects. No new runtime dependency is added.
