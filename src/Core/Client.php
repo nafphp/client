@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Naf\Client\Core;
 
-use Naf\Client\Transports\CurlTransport;
-use Naf\Client\Transports\StreamTransport;
-use Naf\Client\Transports\StreamingTransportInterface;
-use Naf\Client\Transports\TransportInterface;
 use Naf\Client\Exception\ClientException;
+use Naf\Client\Transports\CurlTransport;
+use Naf\Client\Transports\StreamingTransportInterface;
+use Naf\Client\Transports\StreamTransport;
+use Naf\Client\Transports\TransportInterface;
 use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
+use Throwable;
+
 use function Naf\config;
 use function Naf\response;
 
@@ -44,7 +46,7 @@ class Client implements ClientInterface
      */
     public function withOptions(array $options): self
     {
-        $clone = clone $this;
+        $clone          = clone $this;
         $clone->options = [...$this->options, ...$options];
 
         return $clone;
@@ -52,32 +54,32 @@ class Client implements ClientInterface
 
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
-        $cfg = [...(array) config('client', []), ...$this->options];
+        $configuration = [...(array) config('client', []), ...$this->options];
 
         $method = strtoupper($request->getMethod());
         $url    = (string) $request->getUri();
         $body   = $request->getBody();
 
-        $retries      = (int)($cfg['retries'] ?? 1);          // additional attempts
-        $retryDelayMs = (int)($cfg['retry_delay_ms'] ?? 150);
+        $retries      = (int) ($configuration['retries'] ?? 1);          // additional attempts
+        $retryDelayMs = (int) ($configuration['retry_delay_ms'] ?? 150);
 
         $headerLines = $this->buildHeaderLines($request);
 
         // Pre-resolve CA bundle once (transports just consume it).
-        $cfg['ca_bundle']    = $this->resolveCaBundlePath($cfg);
-        $cfg['http_version'] = (string)($cfg['http_version'] ?? 'auto'); // auto|1.1|2
+        $configuration['ca_bundle']    = $this->resolveCaBundlePath($configuration);
+        $configuration['http_version'] = (string) ($configuration['http_version'] ?? 'auto'); // auto|1.1|2
 
         $transport = $this->pickTransport();
         $streaming = $transport instanceof StreamingTransportInterface;
 
-        if (($cfg['streaming'] ?? false) && !$streaming) {
+        if (($configuration['streaming'] ?? false) && !$streaming) {
             throw new ClientException('The selected HTTP transport does not support streaming.');
         }
 
         $offset     = $body->isSeekable() ? $body->tell() : null;
         $legacyBody = $streaming ? null : (string) $body;
 
-        $last = null;
+        $lastException = null;
 
         // Attempt 0..retries
         for ($attempt = 0; $attempt <= $retries; $attempt++) {
@@ -86,26 +88,26 @@ class Client implements ClientInterface
                     $body->seek($offset);
                 }
 
-                [$respBody, $rawHeaders] = $streaming
-                    ? $transport->sendStream($url, $method, $headerLines, $body, $cfg)
-                    : $transport->send($url, $method, $headerLines, $legacyBody, $cfg);
-                [$status, $headers]      = $this->parseHeaders($rawHeaders);
+                [$responseBody, $rawHeaders] = $streaming
+                    ? $transport->sendStream($url, $method, $headerLines, $body, $configuration)
+                    : $transport->send($url, $method, $headerLines, $legacyBody, $configuration);
+                [$status, $headers] = $this->parseHeaders($rawHeaders);
 
                 return $streaming
-                    ? response('', $status, $headers)->withBody($respBody)
-                    : response($respBody, $status, $headers);
-            } catch (\Throwable $e) {
-                $last = $e;
+                    ? response('', $status, $headers)->withBody($responseBody)
+                    : response($responseBody, $status, $headers);
+            } catch (Throwable $exception) {
+                $lastException = $exception;
 
                 // Retry only for common transient TLS/network issues.
-                $msg = strtolower($e->getMessage());
-                $transient =
-                    str_contains($msg, 'failed to enable crypto') ||
-                    str_contains($msg, 'ssl') ||
-                    str_contains($msg, 'tls') ||
-                    str_contains($msg, 'handshake') ||
-                    str_contains($msg, 'timed out') ||
-                    str_contains($msg, 'connection reset');
+                $message = strtolower($exception->getMessage());
+                $transient
+                    = str_contains($message, 'failed to enable crypto')
+                    || str_contains($message, 'ssl')
+                    || str_contains($message, 'tls')
+                    || str_contains($message, 'handshake')
+                    || str_contains($message, 'timed out')
+                    || str_contains($message, 'connection reset');
 
                 $replayable = !$streaming || $offset !== null;
 
@@ -117,22 +119,22 @@ class Client implements ClientInterface
                 }
 
                 throw new ClientException(
-                    'HTTP request failed: ' . $e->getMessage(),
-                    (int) $e->getCode(),
-                    $e
+                    'HTTP request failed: ' . $exception->getMessage(),
+                    (int) $exception->getCode(),
+                    $exception,
                 );
             }
         }
 
-        throw new ClientException('HTTP request failed', 0, $last);
+        throw new ClientException('HTTP request failed', 0, $lastException);
     }
 
     private function pickTransport(): TransportInterface
     {
         // Default: first available
-        foreach ($this->transports as $t) {
-            if ($t->isAvailable()) {
-                return $t;
+        foreach ($this->transports as $transport) {
+            if ($transport->isAvailable()) {
+                return $transport;
             }
         }
 
@@ -164,23 +166,23 @@ class Client implements ClientInterface
     }
 
     /**
-     * @param array<int,string> $raw
+     * @param array<int,string> $rawHeaders
      * @return array{0:int,1:array<string,array<int,string>>}
      */
-    private function parseHeaders(array $raw): array
+    private function parseHeaders(array $rawHeaders): array
     {
-        $statusLine = $raw[0] ?? '';
-        if (!preg_match('#HTTP/\d+(?:\.\d+)?\s+(\d+)#i', $statusLine, $m)) {
+        $statusLine = $rawHeaders[0] ?? '';
+        if (!preg_match('#HTTP/\d+(?:\.\d+)?\s+(\d+)#i', $statusLine, $matches)) {
             throw new ClientException('Failed to parse HTTP status from response');
         }
-        $status = (int) $m[1];
+        $status = (int) $matches[1];
 
         $headers = [];
-        foreach ($raw as $line) {
+        foreach ($rawHeaders as $line) {
             if (str_contains($line, ':')) {
                 [$name, $value] = explode(':', $line, 2);
-                $name  = trim($name);
-                $value = trim($value);
+                $name           = trim($name);
+                $value          = trim($value);
                 if ($name !== '') {
                     $headers[$name][] = $value;
                 }
@@ -190,10 +192,10 @@ class Client implements ClientInterface
         return [$status, $headers];
     }
 
-    private function resolveCaBundlePath(array $cfg): ?string
+    private function resolveCaBundlePath(array $configuration): ?string
     {
         // 1) Explicitly configured
-        $cacert = $cfg['cacert'] ?? null;
+        $cacert = $configuration['cacert'] ?? null;
         if (is_string($cacert) && $cacert !== '' && is_file($cacert)) {
             return $cacert;
         }
