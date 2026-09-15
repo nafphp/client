@@ -4,14 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use Fixtures\Transports\MockTransport;
+use LogicException;
 use Naf\Client\Core\Client;
 use Naf\Client\Exception\ClientException;
-use Naf\Client\Transports\CurlTransport;
 use Naf\Client\Transports\StreamingTransportInterface;
 use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Stream;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamInterface;
+use RuntimeException;
 
 final class StreamingTest extends TestCase
 {
@@ -37,13 +39,14 @@ final class StreamingTest extends TestCase
 
             if (is_resource($probe)) {
                 fclose($probe);
+
                 return;
             }
 
             usleep(10000);
         }
 
-        throw new \RuntimeException('Fixture HTTP server did not start.');
+        throw new RuntimeException('Fixture HTTP server did not start.');
     }
 
     public static function tearDownAfterClass(): void
@@ -115,6 +118,56 @@ final class StreamingTest extends TestCase
         self::assertSame(['payload', 'payload'], $transport->bodies);
     }
 
+    public function testRedirectReplaysUploadFromTheOriginalOffset(): void
+    {
+        $body = Stream::create('skip payload');
+        $body->seek(5);
+        $client = (new Client())->withOptions(['retries' => 0]);
+
+        foreach ([307, 308] as $status) {
+            $body->seek(5);
+            $response = $client->sendRequest(new Request('PUT', self::$url . '/redirect-upload?status=' . $status, [], $body));
+            $result   = json_decode((string) $response->getBody(), true);
+
+            self::assertSame('PUT', $result['method']);
+            self::assertSame(7, $result['length']);
+            self::assertSame(hash('sha256', 'payload'), $result['hash']);
+            self::assertTrue($body->isReadable());
+        }
+    }
+
+    public function testRedirectToGetDropsTheRequestBody(): void
+    {
+        $client = (new Client())->withOptions(['retries' => 0]);
+        foreach ([301, 302, 303] as $status) {
+            $response = $client->sendRequest(new Request('POST', self::$url . '/redirect-upload?status=' . $status, ['Content-Length' => '7'], 'payload'));
+            $result   = json_decode((string) $response->getBody(), true);
+            self::assertSame('GET', $result['method']);
+            self::assertSame(0, $result['length']);
+        }
+    }
+
+    public function testRedirectsDoNotForwardCredentialsToAnotherOrigin(): void
+    {
+        $client = new Client();
+        foreach (['' => true, '?cross=1' => false] as $query => $preserved) {
+            $response = $client->sendRequest(new Request('GET', self::$url . '/redirect-headers' . $query, ['Authorization' => 'Bearer fixture', 'Cookie' => 'session=fixture']));
+            $headers  = array_change_key_case(json_decode((string) $response->getBody(), true));
+            self::assertSame($preserved, isset($headers['authorization']));
+            self::assertSame($preserved, isset($headers['cookie']));
+        }
+    }
+
+    public function testRedirectLimitAndDisabledRedirects(): void
+    {
+        $client = (new Client())->withOptions(['max_redirects' => 0]);
+        self::assertSame(307, $client->sendRequest(new Request('GET', self::$url . '/redirect-loop'))->getStatusCode());
+
+        $this->expectException(ClientException::class);
+        $this->expectExceptionMessage('Maximum HTTP redirects exceeded');
+        $client->withOptions(['max_redirects' => 2])->sendRequest(new Request('GET', self::$url . '/redirect-loop'));
+    }
+
     public function testNonSeekableBodiesAreNotRetried(): void
     {
         [$writer, $reader] = stream_socket_pair(STREAM_PF_UNIX, STREAM_SOCK_STREAM, STREAM_IPPROTO_IP);
@@ -153,7 +206,7 @@ final class StreamingTest extends TestCase
 
         self::assertSame('compressed payload', gzdecode((string) $response->getBody()));
 
-        $transport = new \Fixtures\Transports\MockTransport();
+        $transport = new MockTransport();
         $client    = (new Client([$transport]))->withOptions(['streaming' => true]);
 
         $this->expectException(ClientException::class);
@@ -165,11 +218,16 @@ final class StreamingTest extends TestCase
         return new class implements StreamingTransportInterface {
             public array $bodies = [];
 
-            public function isAvailable(): bool { return true; }
+            public function isAvailable(): bool
+            {
+                return true;
+            }
+
             public function send(string $url, string $method, array $headerLines, string $body, array $config): array
             {
-                throw new \LogicException('The streaming path must be used.');
+                throw new LogicException('The streaming path must be used.');
             }
+
             public function sendStream(string $url, string $method, array $headerLines, StreamInterface $body, array $config): array
             {
                 $this->bodies[] = $body->getContents();

@@ -37,6 +37,14 @@ in the [NAF documentation](https://nafphp.github.io/docs/). Not sure which packa
 composer require naf/client
 ```
 
+## Redirects in the 0.2.2 candidate
+
+The 0.2.2 candidate replays seekable uploads from their original stream position on
+307/308 redirects. POST redirects with 301/302, and 303 redirects, continue with GET
+without a body. Redirects to a different origin drop Authorization and Cookie headers.
+Non-seekable uploads cannot be replayed; disable following with `max_redirects => 0`
+when the caller needs to handle the redirect response itself.
+
 ## License
 
 MIT. Part of [NAF](https://github.com/nafphp/framework).
