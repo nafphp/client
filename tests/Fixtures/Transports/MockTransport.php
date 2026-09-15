@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace Fixtures\Transports;
 
 use Naf\Client\Transports\TransportInterface;
+use RuntimeException;
+use Throwable;
 
 final class MockTransport implements TransportInterface
 {
     /** @var list<array{0:string,1:array<int,string>}> */
     private array $queue = [];
 
-    /** @var list<\Throwable> */
+    /** @var list<Throwable> */
     private array $errors = [];
 
     private int $calls = 0;
@@ -44,7 +46,7 @@ final class MockTransport implements TransportInterface
     /**
      * Enqueue an exception for the next send() call.
      */
-    public function pushError(\Throwable $e): void
+    public function pushError(Throwable $e): void
     {
         $this->errors[] = $e;
     }
@@ -63,7 +65,7 @@ final class MockTransport implements TransportInterface
         }
 
         if ($this->queue === []) {
-            throw new \RuntimeException('MockTransport has no queued response.');
+            throw new RuntimeException('MockTransport has no queued response.');
         }
 
         return array_shift($this->queue);

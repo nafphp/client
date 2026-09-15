@@ -66,3 +66,10 @@ Retries seek to the request's original position. A non-seekable streaming reques
 never automatically retried. `decode_content => false` preserves encoded response bytes
 for object/file storage. Redirects retain only the final response headers and body;
 `max_redirects => 0` disables following redirects. No new runtime dependency is added.
+
+## PHP code style
+
+Source, tests and PHP templates follow the shared [NAF code style](https://github.com/nafphp/docs/blob/main/CODE_STYLE.md)
+(PER Coding Style 3.0 with the Nafinity readability rules). After `composer install`, run
+`composer style:check` to verify formatting or `composer style:fix` to apply it. The formatter
+is a development dependency. Review template output and run the package checks after changes.
