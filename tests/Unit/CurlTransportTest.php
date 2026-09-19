@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use ErrorException;
 use Naf\Client\Exception\ClientException;
 use Naf\Client\Transports\CurlTransport;
 use PHPUnit\Framework\TestCase;
@@ -62,7 +63,7 @@ final class CurlTransportTest extends TestCase
     private function treatDeprecationsAsErrors(): void
     {
         set_error_handler(static function (int $severity, string $message, string $file, int $line): bool {
-            throw new \ErrorException($message, 0, $severity, $file, $line);
+            throw new ErrorException($message, 0, $severity, $file, $line);
         }, E_DEPRECATED | E_USER_DEPRECATED);
     }
 }

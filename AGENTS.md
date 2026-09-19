@@ -55,3 +55,13 @@ changes against a local fixture server; do not rely on live third-party APIs. No
 script is declared.
 
 User docs: [HTTP client](https://nafphp.github.io/docs/http-client/).
+
+The cURL transport additionally implements `StreamingTransportInterface`; legacy custom
+transports still use `TransportInterface`. Require the capability with `streaming => true`
+for bounded-memory consumers. Responses spool to temporary disk; request bodies are
+consumed from their current position and remain open. Preserve retry offset/ownership,
+non-seekable no-retry behavior and the real HTTP stream regression tests.
+
+Follow the shared [PHP code style](https://github.com/nafphp/docs/blob/main/CODE_STYLE.md)
+and `.php-cs-fixer.dist.php`. Run `composer style:check`; `composer style:fix` applies the rules.
+Keep logical steps and local names readable, preserving public signatures and template output.

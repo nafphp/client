@@ -15,7 +15,7 @@ class StreamTransport implements TransportInterface
 
     public function send(string $url, string $method, array $headerLines, string $body, array $config): array
     {
-        $timeout   = (float)($config['timeout'] ?? 20);
+        $timeout   = (float) ($config['timeout'] ?? 20);
         $verifySsl = (bool) ($config['ssl_verify'] ?? true);
         $caBundle  = $config['ca_bundle'] ?? null;
 
@@ -46,7 +46,7 @@ class StreamTransport implements TransportInterface
         $ctx = stream_context_create($opts);
 
         $http_response_header = null; // populated by PHP
-        $respBody = @file_get_contents($url, false, $ctx);
+        $respBody             = @file_get_contents($url, false, $ctx);
 
         if ($respBody === false) {
             $err = error_get_last();

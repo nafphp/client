@@ -2,35 +2,30 @@ name: NAF Client Plugin
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [main, 'v*-rc']
   pull_request:
-    branches: [ "main" ]
+    branches: [main]
 
 permissions:
   contents: read
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.3', '8.4', '8.5']
     steps:
-    - uses: actions/checkout@v7
-
-    - name: Validate composer.json and composer.lock
-      run: composer validate --strict
-
-    - name: Cache Composer packages
-      id: composer-cache
-      uses: actions/cache@v6
-      with:
-        path: vendor
-        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-php-
-
-    - name: Install dependencies
-      run: composer install --prefer-dist --no-progress
-
-    - name: Run test suite
-      run: composer run-script test
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: curl, mbstring, pdo
+          coverage: none
+      - run: composer validate --strict
+      - if: matrix.php == '8.5'
+        run: composer install --prefer-dist --no-progress
+      - if: matrix.php != '8.5'
+        run: composer update --prefer-dist --no-progress
+      - run: composer test

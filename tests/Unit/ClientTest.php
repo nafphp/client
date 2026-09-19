@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use Fixtures\Transports\MockTransport;
 use Naf\Client\Core\Client;
 use Naf\Core\Config;
 use Nyholm\Psr7\Request;
 use Psr\Http\Client\ClientExceptionInterface;
 use Psr\Http\Message\ResponseInterface;
-use Fixtures\Transports\MockTransport;
+use RuntimeException;
 use Tests\NafTestCase;
+
 use function Naf\app;
 use function Naf\Client\client;
 
@@ -46,7 +48,7 @@ final class ClientTest extends NafTestCase
         $response = $client->sendRequest(new Request('GET', 'https://example.com/test'));
 
         $this->assertSame(200, $response->getStatusCode());
-        $this->assertJsonStringEqualsJsonString('{"test":"test"}', (string)$response->getBody());
+        $this->assertJsonStringEqualsJsonString('{"test":"test"}', (string) $response->getBody());
     }
 
     public function testClientExceptionOnMissingResponseStatusCode(): void
@@ -68,7 +70,7 @@ final class ClientTest extends NafTestCase
         $this->expectException(ClientExceptionInterface::class);
 
         $transport = new MockTransport();
-        $transport->pushError(new \RuntimeException('Boom'));
+        $transport->pushError(new RuntimeException('Boom'));
 
         $client = new Client([$transport]);
         $client->sendRequest(new Request('GET', 'https://example.com/test'));
@@ -79,20 +81,20 @@ final class ClientTest extends NafTestCase
         // Configure retries so we actually retry once.
         $config = new Config([
             'client' => [
-                'retries' => 1,
+                'retries'        => 1,
                 'retry_delay_ms' => 0,
             ],
         ]);
         app()->container()->set('config', $config);
 
         $transport = new MockTransport();
-        $transport->pushError(new \RuntimeException('file_get_contents() failed to enable crypto'));
+        $transport->pushError(new RuntimeException('file_get_contents() failed to enable crypto'));
         $transport->pushResponse('ok', [
             'HTTP/1.1 200 OK',
             'Content-Type: text/plain',
         ]);
 
-        $client = new Client([$transport]);
+        $client   = new Client([$transport]);
         $response = $client->sendRequest(new Request('GET', 'https://example.com/test'));
 
         $this->assertSame(200, $response->getStatusCode());
@@ -106,14 +108,14 @@ final class ClientTest extends NafTestCase
 
         $config = new Config([
             'client' => [
-                'retries' => 3,
+                'retries'        => 3,
                 'retry_delay_ms' => 0,
             ],
         ]);
         app()->container()->set('config', $config);
 
         $transport = new MockTransport();
-        $transport->pushError(new \RuntimeException('Invalid response schema')); // not transient
+        $transport->pushError(new RuntimeException('Invalid response schema')); // not transient
 
         $client = new Client([$transport]);
         $client->sendRequest(new Request('GET', 'https://example.com/test'));
@@ -152,7 +154,7 @@ final class ClientTest extends NafTestCase
             'Content-Type: text/plain',
         ]);
 
-        $client = new Client([$transport]);
+        $client   = new Client([$transport]);
         $response = $client->sendRequest(new Request('GET', 'https://example.com/test'));
 
         $this->assertSame(200, $response->getStatusCode());
@@ -166,7 +168,7 @@ final class ClientTest extends NafTestCase
     public function testWithOptionsOverridesRetriesForThisCallOnly(): void
     {
         $transport = new MockTransport();
-        $transport->pushError(new \RuntimeException('file_get_contents() failed to enable crypto'));
+        $transport->pushError(new RuntimeException('file_get_contents() failed to enable crypto'));
 
         $shared  = new Client([$transport]);
         $oneShot = $shared->withOptions(['retries' => 0]);
@@ -184,7 +186,7 @@ final class ClientTest extends NafTestCase
     public function testWithOptionsLeavesTheSharedClientUntouched(): void
     {
         $transport = new MockTransport();
-        $transport->pushError(new \RuntimeException('file_get_contents() failed to enable crypto'));
+        $transport->pushError(new RuntimeException('file_get_contents() failed to enable crypto'));
         $transport->pushResponse('ok', [
             'HTTP/1.1 200 OK',
             'Content-Type: text/plain',
