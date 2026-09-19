@@ -49,7 +49,7 @@ when the caller needs to handle the redirect response itself.
 
 MIT. Part of [NAF](https://github.com/nafphp/framework).
 
-## Streaming changes in 0.2.2 (unreleased)
+## Streaming behavior
 
 The default cURL transport transfers PSR-7 request bodies in chunks from their current
 position and spools responses to automatically deleted temporary files. Caller-owned
