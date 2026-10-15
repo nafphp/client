@@ -54,6 +54,9 @@ for deterministic request/response, retry and option-isolation checks. Test real
 changes against a local fixture server; do not rely on live third-party APIs. No `analyse`
 script is declared.
 
+The stream-wrapper fallback returns redirects without following them. Its wrapper cannot
+strip sensitive headers reliably across origins; use cURL for deliberate redirect handling.
+
 User docs: [HTTP client](https://nafphp.github.io/docs/http-client/).
 
 The cURL transport additionally implements `StreamingTransportInterface`; legacy custom

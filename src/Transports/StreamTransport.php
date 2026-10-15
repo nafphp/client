@@ -29,6 +29,9 @@ class StreamTransport implements TransportInterface
                 'content'       => $body,
                 'ignore_errors' => true,
                 'timeout'       => $timeout,
+                // PHP's wrapper forwards caller-supplied credentials across redirects.
+                // Return the original response; cURL owns deliberate redirect handling.
+                'follow_location' => 0,
             ],
             'ssl' => [
                 'SNI_enabled'       => true,

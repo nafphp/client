@@ -9,6 +9,7 @@ use LogicException;
 use Naf\Client\Core\Client;
 use Naf\Client\Exception\ClientException;
 use Naf\Client\Transports\StreamingTransportInterface;
+use Naf\Client\Transports\StreamTransport;
 use Nyholm\Psr7\Request;
 use Nyholm\Psr7\Stream;
 use PHPUnit\Framework\TestCase;
@@ -166,6 +167,26 @@ final class StreamingTest extends TestCase
         $this->expectException(ClientException::class);
         $this->expectExceptionMessage('Maximum HTTP redirects exceeded');
         $client->withOptions(['max_redirects' => 2])->sendRequest(new Request('GET', self::$url . '/redirect-loop'));
+    }
+
+    public function testStreamFallbackReturnsRedirectWithoutForwardingCredentials(): void
+    {
+        $client   = (new Client([new StreamTransport()]))->withOptions(['retries' => 0]);
+        $response = $client->sendRequest(new Request('GET', self::$url . '/redirect-headers?cross=1', [
+            'Authorization' => 'Bearer fixture',
+            'Cookie'        => 'session=fixture',
+        ]));
+
+        self::assertSame(307, $response->getStatusCode());
+        self::assertStringContainsString('/headers', $response->getHeaderLine('Location'));
+        self::assertSame('', (string) $response->getBody());
+
+        $response = $client->sendRequest(new Request('GET', self::$url . '/redirect'));
+
+        self::assertSame(302, $response->getStatusCode());
+        self::assertSame('/large', $response->getHeaderLine('Location'));
+        self::assertSame('discard this body', (string) $response->getBody());
+        self::assertSame('stale', $response->getHeaderLine('X-Old'));
     }
 
     public function testNonSeekableBodiesAreNotRetried(): void
