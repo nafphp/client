@@ -19,8 +19,8 @@ use Throwable;
  * the PHP version that introduces it, and it breaks them in a way that looks
  * like the remote side is at fault.
  *
- * These tests install the same kind of handler and make requests that need no
- * network, one down each path out of curl_exec().
+ * The failure test installs the same kind of handler; successful transfers are
+ * covered against the local HTTP fixture in StreamingTest.
  */
 final class CurlTransportTest extends TestCase
 {
@@ -40,22 +40,6 @@ final class CurlTransportTest extends TestCase
             // The point: a cURL error, not "Function curl_close() is deprecated".
             self::assertInstanceOf(ClientException::class, $e);
             self::assertStringContainsString('cURL error', $e->getMessage());
-        }
-    }
-
-    public function testASuccessfulRequestRaisesNothing(): void
-    {
-        $file = tempnam(sys_get_temp_dir(), 'naf-client-') ?: '';
-        file_put_contents($file, 'hello');
-
-        $this->treatDeprecationsAsErrors();
-
-        try {
-            [$body] = (new CurlTransport())->send('file://' . $file, 'GET', [], '', []);
-
-            self::assertSame('hello', $body);
-        } finally {
-            @unlink($file);
         }
     }
 

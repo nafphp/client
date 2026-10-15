@@ -54,6 +54,11 @@ class Client implements ClientInterface
 
     public function sendRequest(RequestInterface $request): ResponseInterface
     {
+        $uri = $request->getUri();
+        if (!in_array(strtolower($uri->getScheme()), ['http', 'https'], true) || $uri->getHost() === '') {
+            throw new ClientException('HTTP requests require an absolute HTTP(S) URL with a host.');
+        }
+
         $configuration = [...(array) config('client', []), ...$this->options];
 
         $method = strtoupper($request->getMethod());

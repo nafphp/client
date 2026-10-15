@@ -2,6 +2,12 @@
 
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
+if ($path === '/unsafe-redirect') {
+    header('Location: gopher://127.0.0.1:1/_hello', true, 302);
+
+    return;
+}
+
 if ($path === '/redirect-upload') {
     file_get_contents('php://input');
     header('Location: /upload', true, (int) ($_GET['status'] ?? 307));

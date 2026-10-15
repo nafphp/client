@@ -29,6 +29,12 @@ final class CurlTransport implements StreamingTransportInterface
 
     public function sendStream(string $url, string $method, array $headerLines, StreamInterface $body, array $config): array
     {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (!in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true)
+            || !is_string($host) || $host === '') {
+            throw new ClientException('HTTP requests require an absolute HTTP(S) URL with a host.');
+        }
+
         $limit  = max(0, (int) ($config['max_redirects'] ?? 5));
         $offset = $body->isSeekable() ? $body->tell() : null;
 
@@ -159,6 +165,14 @@ final class CurlTransport implements StreamingTransportInterface
             },
         ];
 
+        if (defined('CURLOPT_PROTOCOLS_STR') && defined('CURLOPT_REDIR_PROTOCOLS_STR')) {
+            $options[CURLOPT_PROTOCOLS_STR]       = 'http,https';
+            $options[CURLOPT_REDIR_PROTOCOLS_STR] = 'http,https';
+        } else {
+            $options[CURLOPT_PROTOCOLS]       = CURLPROTO_HTTP | CURLPROTO_HTTPS;
+            $options[CURLOPT_REDIR_PROTOCOLS] = CURLPROTO_HTTP | CURLPROTO_HTTPS;
+        }
+
         if ($verifySsl && is_string($caBundle) && $caBundle !== '' && is_file($caBundle)) {
             $options[CURLOPT_CAINFO] = $caBundle;
         }
@@ -199,9 +213,8 @@ final class CurlTransport implements StreamingTransportInterface
                 throw new ClientException('cURL error (' . curl_errno($handle) . '): ' . curl_error($handle), 0, $failure);
             }
 
-            // file:// has no HTTP status line; retain the legacy transport behavior.
             if ($headers === [] || !str_starts_with($headers[0], 'HTTP/')) {
-                array_unshift($headers, 'HTTP/1.1 ' . curl_getinfo($handle, CURLINFO_RESPONSE_CODE));
+                throw new ClientException('HTTP response status line missing.');
             }
 
             $response->rewind();
