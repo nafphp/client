@@ -15,11 +15,15 @@ class StreamTransport implements TransportInterface
 
     public function send(string $url, string $method, array $headerLines, string $body, array $config): array
     {
+        $host = parse_url($url, PHP_URL_HOST);
+        if (!in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true)
+            || !is_string($host) || $host === '') {
+            throw new ClientException('HTTP requests require an absolute HTTP(S) URL with a host.');
+        }
+
         $timeout   = (float) ($config['timeout'] ?? 20);
         $verifySsl = (bool) ($config['ssl_verify'] ?? true);
         $caBundle  = $config['ca_bundle'] ?? null;
-
-        $host = parse_url($url, PHP_URL_HOST) ?: '';
 
         // Stream wrapper TLS can be picky; set SNI + peer_name explicitly.
         $opts = [
