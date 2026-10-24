@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Tests\Unit;
 
+use ErrorException;
 use Fixtures\Transports\MockTransport;
 use LogicException;
 use Naf\Client\Core\Client;
 use Naf\Client\Exception\ClientException;
+use Naf\Client\Transports\CurlTransport;
 use Naf\Client\Transports\StreamingTransportInterface;
 use Naf\Client\Transports\StreamTransport;
 use Nyholm\Psr7\Request;
@@ -55,6 +57,28 @@ final class StreamingTest extends TestCase
         proc_terminate(self::$server);
         proc_close(self::$server);
         unlink(self::$log);
+    }
+
+    public function testSuccessfulHttpTransferRaisesNoDeprecation(): void
+    {
+        set_error_handler(static function (int $severity, string $message, string $file, int $line): never {
+            throw new ErrorException($message, 0, $severity, $file, $line);
+        }, E_DEPRECATED | E_USER_DEPRECATED);
+
+        try {
+            [$body, $headers] = (new CurlTransport())->send(self::$url . '/compressed', 'GET', [], '', []);
+            self::assertSame('compressed payload', $body);
+            self::assertStringContainsString('200', $headers[0]);
+        } finally {
+            restore_error_handler();
+        }
+    }
+
+    public function testNonHttpRedirectsAreRejected(): void
+    {
+        $this->expectException(ClientException::class);
+        $this->expectExceptionMessage('HTTP(S)');
+        (new Client())->sendRequest(new Request('GET', self::$url . '/unsafe-redirect'));
     }
 
     public function testLargeTransfersUseBoundedMemoryAndPreserveInputOwnership(): void
